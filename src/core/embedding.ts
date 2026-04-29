@@ -1,34 +1,112 @@
 /**
- * Embedding Service
- * Ported from production Ruby implementation (embedding_service.rb, 190 LOC)
+ * Local Embedding Service
  *
- * OpenAI text-embedding-3-large at 1536 dimensions.
- * Retry with exponential backoff (4s base, 120s cap, 5 retries).
- * 8000 character input truncation.
+ * Uses node-llama-cpp to run bge-m3 locally via GGUF.
+ * Model is lazy-loaded on first call and unloaded after an idle timeout.
  */
 
-import OpenAI from 'openai';
+import { existsSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
 
-const MODEL = 'text-embedding-3-large';
-const DIMENSIONS = 1536;
+const MODEL = 'bge-m3';
+const DIMENSIONS = 1024;
 const MAX_CHARS = 8000;
-const MAX_RETRIES = 5;
-const BASE_DELAY_MS = 4000;
-const MAX_DELAY_MS = 120000;
 const BATCH_SIZE = 100;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
-let client: OpenAI | null = null;
+const DEFAULT_MODEL_DIR = join(homedir(), '.gbrain', 'models');
+const MODEL_FILENAME = 'bge-m3-f16.gguf';
 
-function getClient(): OpenAI {
-  if (!client) {
-    client = new OpenAI();
+let llama: any = null;
+let model: any = null;
+let context: any = null;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let loading: Promise<void> | null = null;
+let modelPathOverride: string | null = null;
+
+function getModelPath(): string {
+  if (modelPathOverride) return modelPathOverride;
+  const envPath = process.env.GBRAIN_EMBEDDING_MODEL;
+  if (envPath) return envPath;
+  return join(DEFAULT_MODEL_DIR, MODEL_FILENAME);
+}
+
+function resetIdleTimer(): void {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    dispose().catch(() => {});
+  }, IDLE_TIMEOUT_MS);
+}
+
+async function ensureLoaded(): Promise<void> {
+  if (context) {
+    resetIdleTimer();
+    return;
   }
-  return client;
+
+  if (loading) {
+    await loading;
+    return;
+  }
+
+  loading = (async () => {
+    const modelPath = getModelPath();
+    if (!existsSync(modelPath)) {
+      throw new Error(
+        `Embedding model not found at ${modelPath}. ` +
+        `Download ${MODEL_FILENAME} to ${DEFAULT_MODEL_DIR}/ ` +
+        `or set GBRAIN_EMBEDDING_MODEL to the full path.`,
+      );
+    }
+
+    const { getLlama } = await import('node-llama-cpp');
+    llama = await getLlama();
+    model = await llama.loadModel({ modelPath });
+    context = await model.createEmbeddingContext();
+    resetIdleTimer();
+  })();
+
+  try {
+    await loading;
+  } finally {
+    loading = null;
+  }
+}
+
+export function setModelPath(path: string | null): void {
+  modelPathOverride = path;
+}
+
+export function isAvailable(): boolean {
+  return existsSync(getModelPath());
+}
+
+export function isLoaded(): boolean {
+  return context != null;
+}
+
+export async function dispose(): Promise<void> {
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+    idleTimer = null;
+  }
+
+  if (context) {
+    await context.dispose();
+    context = null;
+  }
+
+  if (model) {
+    await model.dispose();
+    model = null;
+  }
+
+  llama = null;
 }
 
 export async function embed(text: string): Promise<Float32Array> {
-  const truncated = text.slice(0, MAX_CHARS);
-  const result = await embedBatch([truncated]);
+  const result = await embedBatch([text]);
   return result[0];
 }
 
@@ -48,10 +126,18 @@ export async function embedBatch(
   const truncated = texts.map(t => t.slice(0, MAX_CHARS));
   const results: Float32Array[] = [];
 
-  // Process in batches of BATCH_SIZE
+  if (truncated.length === 0) return results;
+
+  await ensureLoaded();
+
   for (let i = 0; i < truncated.length; i += BATCH_SIZE) {
     const batch = truncated.slice(i, i + BATCH_SIZE);
-    const batchResults = await embedBatchWithRetry(batch);
+    const batchResults = await Promise.all(
+      batch.map(async text => {
+        const embedding = await context.getEmbeddingFor(text);
+        return new Float32Array(embedding.vector);
+      }),
+    );
     results.push(...batchResults);
     options.onBatchComplete?.(results.length, truncated.length);
   }
@@ -59,64 +145,13 @@ export async function embedBatch(
   return results;
 }
 
-async function embedBatchWithRetry(texts: string[]): Promise<Float32Array[]> {
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const response = await getClient().embeddings.create({
-        model: MODEL,
-        input: texts,
-        dimensions: DIMENSIONS,
-      });
-
-      // Sort by index to maintain order
-      const sorted = response.data.sort((a, b) => a.index - b.index);
-      return sorted.map(d => new Float32Array(d.embedding));
-    } catch (e: unknown) {
-      if (attempt === MAX_RETRIES - 1) throw e;
-
-      // Check for rate limit with Retry-After header
-      let delay = exponentialDelay(attempt);
-
-      if (e instanceof OpenAI.APIError && e.status === 429) {
-        const retryAfter = e.headers?.['retry-after'];
-        if (retryAfter) {
-          const parsed = parseInt(retryAfter, 10);
-          if (!isNaN(parsed)) {
-            delay = parsed * 1000;
-          }
-        }
-      }
-
-      await sleep(delay);
-    }
-  }
-
-  // Should not reach here
-  throw new Error('Embedding failed after all retries');
-}
-
-function exponentialDelay(attempt: number): number {
-  const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-  return Math.min(delay, MAX_DELAY_MS);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 export { MODEL as EMBEDDING_MODEL, DIMENSIONS as EMBEDDING_DIMENSIONS };
 
 /**
- * v0.20.0 Cathedral II Layer 8 (D1): USD cost per 1k tokens for
- * text-embedding-3-large. Used by `gbrain sync --all` cost preview and
- * the reindex-code backfill command to surface expected spend before
- * the agent/user accepts an expensive operation.
- *
- * Value: $0.00013 / 1k tokens as of 2026. Update when OpenAI changes
- * pricing. Single source of truth — every cost-preview surface reads
- * this constant, so a pricing change is a one-line edit.
+ * Local embeddings do not incur a per-request API bill, so cost previews
+ * currently report zero direct model spend.
  */
-export const EMBEDDING_COST_PER_1K_TOKENS = 0.00013;
+export const EMBEDDING_COST_PER_1K_TOKENS = 0;
 
 /** Compute USD cost estimate for embedding `tokens` at current model rate. */
 export function estimateEmbeddingCostUsd(tokens: number): number {

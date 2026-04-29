@@ -9,9 +9,9 @@ import type { BrainEngine } from './engine.ts';
 import { clampSearchLimit } from './engine.ts';
 import type { GBrainConfig } from './config.ts';
 import type { PageType } from './types.ts';
+import { isAvailable as embeddingAvailable } from './embedding.ts';
 import { importFromContent } from './import-file.ts';
 import { hybridSearch } from './search/hybrid.ts';
-import { expandQuery } from './search/expansion.ts';
 import { dedupResults } from './search/dedup.ts';
 import { extractPageLinks, isAutoLinkEnabled, isAutoTimelineEnabled, parseTimelineEntries, makeResolver, type UnresolvedFrontmatterRef } from './link-extraction.ts';
 import * as db from './db.ts';
@@ -271,11 +271,7 @@ const put_page: Operation = {
     }
 
     if (ctx.dryRun) return { dry_run: true, action: 'put_page', slug: p.slug };
-    // Skip embedding when no OpenAI key is configured. importFromContent's existing
-    // try/catch around embed only catches; without a key the OpenAI client would
-    // attempt 5 retries with exponential backoff (up to ~2 minutes total) before
-    // giving up. Detect early.
-    const noEmbed = !process.env.OPENAI_API_KEY;
+    const noEmbed = !embeddingAvailable();
     const result = await importFromContent(ctx.engine, slug, p.content as string, { noEmbed });
 
     // Auto-link post-hook: runs AFTER importFromContent (which is its own
@@ -574,12 +570,12 @@ const search: Operation = {
 
 const query: Operation = {
   name: 'query',
-  description: 'Hybrid search with vector + keyword + multi-query expansion',
+  description: 'Hybrid search with vector + keyword retrieval',
   params: {
     query: { type: 'string', required: true },
     limit: { type: 'number', description: 'Max results (default 20)' },
     offset: { type: 'number', description: 'Skip first N results (for pagination)' },
-    expand: { type: 'boolean', description: 'Enable multi-query expansion (default: true)' },
+    expand: { type: 'boolean', description: 'Reserved for host-managed query expansion' },
     detail: { type: 'string', description: 'Result detail level: low (compiled truth only), medium (default, all with dedup), high (all chunks)' },
     // v0.20.0 Cathedral II Layer 10 C1/C2: language + symbol-kind filters.
     lang: { type: 'string', description: 'Filter to chunks where content_chunks.language matches (e.g., typescript, python, ruby)' },
@@ -589,13 +585,10 @@ const query: Operation = {
     walk_depth: { type: 'number', description: 'Structural walk depth 1-2. Default 0 (off). Expands anchors through code_edges with 1/(1+hop) decay.' },
   },
   handler: async (ctx, p) => {
-    const expand = p.expand !== false;
     const detail = (p.detail as 'low' | 'medium' | 'high') || undefined;
     return hybridSearch(ctx.engine, p.query as string, {
       limit: (p.limit as number) || 20,
       offset: (p.offset as number) || 0,
-      expansion: expand,
-      expandFn: expand ? expandQuery : undefined,
       detail,
       language: (p.lang as string) || undefined,
       symbolKind: (p.symbol_kind as string) || undefined,
