@@ -31,17 +31,30 @@ restart the shell or add the PATH export to the shell profile.
 > aborts with `Aborted()` when it opens PGLite. Use the `git clone + bun link` path
 > above. Tracking issue: [#218](https://github.com/garrytan/gbrain/issues/218).
 
-## Step 2: API Keys
+## Step 2: Local Model + Optional API Keys
 
-Ask the user for these:
+Core startup does not require any provider API key.
+
+For hybrid/vector retrieval, install the local embedding model:
 
 ```bash
-export OPENAI_API_KEY=sk-...          # required for vector search
-export ANTHROPIC_API_KEY=sk-ant-...   # optional, improves search quality
+mkdir -p ~/.gbrain/models
+# Place bge-m3-f16.gguf at:
+#   ~/.gbrain/models/bge-m3-f16.gguf
+# or point gbrain at a custom location:
+export GBRAIN_EMBEDDING_MODEL=/full/path/to/bge-m3-f16.gguf
 ```
 
-Save to shell profile or `.env`. Without OpenAI, keyword search still works.
-Without Anthropic, search works but skips query expansion.
+Optional provider keys can be added later for optional features only:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # optional: subagent/minion agent runtime
+export GROQ_API_KEY=gsk_...           # optional: transcription
+export OPENAI_API_KEY=sk-...          # optional: transcription fallback / provider-specific extras
+```
+
+Without the local embedding model, keyword search still works and `query`
+falls back to keyword-only retrieval.
 
 ## Step 3: Create the Brain
 

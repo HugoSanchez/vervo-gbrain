@@ -575,7 +575,6 @@ const query: Operation = {
     query: { type: 'string', required: true },
     limit: { type: 'number', description: 'Max results (default 20)' },
     offset: { type: 'number', description: 'Skip first N results (for pagination)' },
-    expand: { type: 'boolean', description: 'Reserved for host-managed query expansion' },
     detail: { type: 'string', description: 'Result detail level: low (compiled truth only), medium (default, all with dedup), high (all chunks)' },
     // v0.20.0 Cathedral II Layer 10 C1/C2: language + symbol-kind filters.
     lang: { type: 'string', description: 'Filter to chunks where content_chunks.language matches (e.g., typescript, python, ruby)' },

@@ -18,9 +18,12 @@ export async function runInit(args: string[]) {
   const urlIndex = args.indexOf('--url');
   const manualUrl = urlIndex !== -1 ? args[urlIndex + 1] : null;
   const keyIndex = args.indexOf('--key');
-  const apiKey = keyIndex !== -1 ? args[keyIndex + 1] : null;
   const pathIndex = args.indexOf('--path');
   const customPath = pathIndex !== -1 ? args[pathIndex + 1] : null;
+
+  if (keyIndex !== -1) {
+    console.warn('[gbrain] init --key is deprecated and ignored. Local embeddings no longer use provider API keys.');
+  }
 
   // Schema-only path: apply initSchema against the already-configured engine
   // without ever calling saveConfig. Used by apply-migrations, the stopgap
@@ -47,7 +50,7 @@ export async function runInit(args: string[]) {
       }
     }
 
-    return initPGLite({ jsonOutput, apiKey, customPath });
+    return initPGLite({ jsonOutput, customPath });
   }
 
   // Supabase/Postgres mode
@@ -66,7 +69,7 @@ export async function runInit(args: string[]) {
     databaseUrl = await supabaseWizard();
   }
 
-  return initPostgres({ databaseUrl, jsonOutput, apiKey });
+  return initPostgres({ databaseUrl, jsonOutput });
 }
 
 /**
@@ -102,7 +105,7 @@ async function initMigrateOnly(opts: { jsonOutput: boolean }) {
   }
 }
 
-async function initPGLite(opts: { jsonOutput: boolean; apiKey: string | null; customPath: string | null }) {
+async function initPGLite(opts: { jsonOutput: boolean; customPath: string | null }) {
   const dbPath = opts.customPath || join(homedir(), '.gbrain', 'brain.pglite');
   console.log(`Setting up local brain with PGLite (no server needed)...`);
 
@@ -114,7 +117,6 @@ async function initPGLite(opts: { jsonOutput: boolean; apiKey: string | null; cu
     const config: GBrainConfig = {
       engine: 'pglite',
       database_path: dbPath,
-      ...(opts.apiKey ? { openai_api_key: opts.apiKey } : {}),
     };
     saveConfig(config);
 
@@ -143,7 +145,7 @@ async function initPGLite(opts: { jsonOutput: boolean; apiKey: string | null; cu
   }
 }
 
-async function initPostgres(opts: { databaseUrl: string; jsonOutput: boolean; apiKey: string | null }) {
+async function initPostgres(opts: { databaseUrl: string; jsonOutput: boolean }) {
   const { databaseUrl } = opts;
 
   // Detect Supabase direct connection URLs and warn about IPv6
@@ -197,7 +199,6 @@ async function initPostgres(opts: { databaseUrl: string; jsonOutput: boolean; ap
     const config: GBrainConfig = {
       engine: 'postgres',
       database_url: databaseUrl,
-      ...(opts.apiKey ? { openai_api_key: opts.apiKey } : {}),
     };
     saveConfig(config);
     console.log('Config saved to ~/.gbrain/config.json');

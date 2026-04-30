@@ -1,6 +1,11 @@
 /**
- * Multi-Query Expansion via Claude Haiku
+ * Legacy optional multi-query expansion helper.
  * Ported from production Ruby implementation (query_expansion_service.rb, 69 LOC)
+ *
+ * vervo-gbrain does NOT call this from the default query path. Vervo/Hermes
+ * is expected to own query expansion at the host layer when expansion is
+ * desirable. This module remains as an internal compatibility helper for
+ * experiments and eval tooling until the broader provider cleanup lands.
  *
  * Skip queries < 3 words.
  * Generate 2 alternative phrasings via tool use.

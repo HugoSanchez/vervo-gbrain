@@ -312,7 +312,7 @@ OPTIONS
   --config-b <path|json>      Config for strategy B (triggers A/B mode)
   --strategy <s>              Search strategy: hybrid | keyword | vector
   --rrf-k <n>                 Override RRF K constant (default: 60)
-  --expand / --no-expand      Enable/disable multi-query expansion
+  --expand / --no-expand      Legacy eval flag for optional expansion helpers
   --dedup-cosine <f>          Override cosine dedup threshold (default: 0.85)
   --dedup-type-ratio <f>      Override type ratio cap (default: 0.6)
   --dedup-max-per-page <n>    Override max chunks per page (default: 2)

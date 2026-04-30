@@ -9,12 +9,6 @@
       "required": true,
       "description": "PostgreSQL connection URL (Supabase recommended)",
       "uiHints": { "sensitive": true }
-    },
-    "openai_api_key": {
-      "type": "string",
-      "required": false,
-      "description": "OpenAI API key for embeddings (uses OPENAI_API_KEY env var if not set)",
-      "uiHints": { "sensitive": true }
     }
   },
   "mcpServers": {

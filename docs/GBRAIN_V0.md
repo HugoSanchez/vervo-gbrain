@@ -244,7 +244,7 @@ gbrain init [--supabase|--url <conn>]     # create brain
 gbrain get <slug>                          # read a page
 gbrain put <slug> [< file.md]             # write/update a page
 gbrain search <query>                      # keyword search (tsvector)
-gbrain query <question>                    # hybrid search (RRF + expansion)
+gbrain query <question>                    # hybrid search (vector + keyword + RRF)
 gbrain ingest <file> [--type ...]         # ingest a source document
 gbrain link <from> <to> [--type <type>]   # create typed link
 gbrain unlink <from> <to>                 # remove link

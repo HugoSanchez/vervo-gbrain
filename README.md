@@ -44,6 +44,11 @@ gbrain import ~/notes/          # index your markdown
 gbrain query "what themes show up across my notes?"
 ```
 
+Core local setup does not require provider API keys. For hybrid/vector search,
+install the local `bge-m3-f16.gguf` model at `~/.gbrain/models/` or point
+`GBRAIN_EMBEDDING_MODEL` at a custom path. Until then, `gbrain query` falls
+back to keyword-only retrieval.
+
 **Do NOT use `bun install -g github:garrytan/gbrain`.** Bun blocks the top-level
 postinstall hook on global installs, so schema migrations never run and the CLI
 aborts with `Aborted()` the first time it opens PGLite. Use `git clone + bun install
@@ -503,8 +508,8 @@ Question
   │
   ├─ SEARCH PIPELINE (every query)
   │    ├─ Intent classifier (entity / temporal / event / general — auto-routes)
-  │    ├─ Multi-query expansion (Haiku rephrases the question 3 ways)
-  │    ├─ Vector search (HNSW cosine over OpenAI embeddings)
+  │    ├─ Optional host-managed expansion (Vervo/Hermes may rephrase upstream)
+  │    ├─ Vector search (HNSW cosine over local bge-m3 embeddings)
   │    ├─ Keyword search (Postgres tsvector + websearch_to_tsquery)
   │    ├─ Source-aware ranking (curated dirs outrank chat/daily swamp at SQL layer)
   │    ├─ Hard-exclude (test/ archive/ attachments/ .raw/ filtered before retrieval)

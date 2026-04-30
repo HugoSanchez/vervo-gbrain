@@ -111,8 +111,8 @@ gbrain stats
 gbrain embed --stale
 ```
 
-If `OPENAI_API_KEY` is not set, embeddings can't be generated. Keyword search
-still works without embeddings, but hybrid/semantic search won't.
+If the local embedding model is not installed, embeddings can't be generated.
+Keyword search still works without embeddings, but hybrid/semantic search won't.
 
 ### 4c. End-to-End Test
 
@@ -156,13 +156,14 @@ gbrain stats
 
 **Expected:** Embedded chunk count matches (or is close to) total chunk count.
 
-**If zero or very low:** `OPENAI_API_KEY` may be missing or invalid. Check:
+**If zero or very low:** the local embedding model may be missing or misconfigured. Check:
 
 ```bash
-echo $OPENAI_API_KEY | head -c 10
+echo ${GBRAIN_EMBEDDING_MODEL:-$HOME/.gbrain/models/bge-m3-f16.gguf}
 ```
 
-If blank, set the key. Then:
+If the file is missing, place `bge-m3-f16.gguf` there or set
+`GBRAIN_EMBEDDING_MODEL` to the correct full path. Then:
 
 ```bash
 gbrain embed --stale
