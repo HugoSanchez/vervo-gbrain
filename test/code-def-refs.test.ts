@@ -15,6 +15,7 @@ import { PGLiteEngine } from '../src/core/pglite-engine.ts';
 import { importCodeFile } from '../src/core/import-file.ts';
 import { findCodeDef } from '../src/commands/code-def.ts';
 import { findCodeRefs } from '../src/commands/code-refs.ts';
+import { EMBEDDING_DIMENSIONS } from '../src/core/embedding.ts';
 
 let engine: PGLiteEngine;
 
@@ -80,7 +81,7 @@ export class PGLiteEngine implements BrainEngine {
   }
 
   async searchVector(embedding: Float32Array, opts: { limit?: number } = {}) {
-    if (embedding.length !== 1536) throw new Error('bad embedding dim');
+    if (embedding.length !== ${EMBEDDING_DIMENSIONS}) throw new Error('bad embedding dim');
     const limit = opts.limit ?? 10;
     return [{ slug: 'vec-1', score: 0.88 }, { slug: 'vec-2', score: 0.77 }].slice(0, limit);
   }

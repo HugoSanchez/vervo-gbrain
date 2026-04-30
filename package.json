@@ -23,7 +23,6 @@
     "./markdown": "./src/core/markdown.ts",
     "./backoff": "./src/core/backoff.ts",
     "./search/hybrid": "./src/core/search/hybrid.ts",
-    "./search/expansion": "./src/core/search/expansion.ts",
     "./extract": "./src/commands/extract.ts"
   },
   "scripts": {

@@ -19,7 +19,7 @@ for (const op of operations) {
 }
 
 // CLI-only commands that bypass the operation layer
-const CLI_ONLY = new Set(['init', 'upgrade', 'post-upgrade', 'check-update', 'integrations', 'publish', 'check-backlinks', 'lint', 'report', 'import', 'export', 'files', 'embed', 'serve', 'call', 'config', 'doctor', 'migrate', 'eval', 'sync', 'extract', 'features', 'autopilot', 'graph-query', 'jobs', 'agent', 'apply-migrations', 'skillpack-check', 'skillpack', 'resolvers', 'integrity', 'repair-jsonb', 'orphans', 'sources', 'dream', 'check-resolvable', 'routing-eval', 'skillify', 'smoke-test', 'repos', 'code-def', 'code-refs', 'reindex-code', 'code-callers', 'code-callees', 'frontmatter', 'auth']);
+const CLI_ONLY = new Set(['init', 'upgrade', 'post-upgrade', 'check-update', 'integrations', 'publish', 'check-backlinks', 'lint', 'report', 'import', 'export', 'files', 'embed', 'models', 'serve', 'call', 'config', 'doctor', 'migrate', 'eval', 'sync', 'extract', 'features', 'autopilot', 'graph-query', 'jobs', 'agent', 'apply-migrations', 'skillpack-check', 'skillpack', 'resolvers', 'integrity', 'repair-jsonb', 'orphans', 'sources', 'dream', 'check-resolvable', 'routing-eval', 'skillify', 'smoke-test', 'repos', 'code-def', 'code-refs', 'reindex-code', 'code-callers', 'code-callees', 'frontmatter', 'auth']);
 
 async function main() {
   // Parse global flags (--quiet / --progress-json / --progress-interval)
@@ -283,6 +283,11 @@ async function handleCliOnly(command: string, args: string[]) {
   if (command === 'integrations') {
     const { runIntegrations } = await import('./commands/integrations.ts');
     await runIntegrations(args);
+    return;
+  }
+  if (command === 'models') {
+    const { runModels } = await import('./commands/models.ts');
+    await runModels(args);
     return;
   }
   if (command === 'auth') {
@@ -656,6 +661,7 @@ FILES
 
 EMBEDDINGS
   embed [<slug>|--all|--stale]       Generate/refresh embeddings
+  models <status|path|install>       Inspect or provision local embedding models
 
 LINKS
   link <from> <to> [--type T]        Create typed link

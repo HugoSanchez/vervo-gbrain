@@ -38,10 +38,10 @@ Core startup does not require any provider API key.
 For hybrid/vector retrieval, install the local embedding model:
 
 ```bash
-mkdir -p ~/.gbrain/models
-# Place bge-m3-f16.gguf at:
-#   ~/.gbrain/models/bge-m3-f16.gguf
-# or point gbrain at a custom location:
+# Preferred: let gbrain provision the artifact.
+gbrain models install --source <path-or-url>
+
+# Or point gbrain at a custom location you already manage:
 export GBRAIN_EMBEDDING_MODEL=/full/path/to/bge-m3-f16.gguf
 ```
 

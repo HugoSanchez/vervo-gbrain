@@ -135,3 +135,10 @@ describe('sanitizeExpansionOutput (M2 output sanitization)', () => {
     expect(sanitizeExpansionOutput([])).toEqual([]);
   });
 });
+
+describe('query expansion cutover', () => {
+  it('does not export the legacy expansion helper as part of the public package surface', async () => {
+    const pkg = JSON.parse(await Bun.file(new URL('../package.json', import.meta.url)).text());
+    expect(pkg.exports['./search/expansion']).toBeUndefined();
+  });
+});

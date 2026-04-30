@@ -159,11 +159,11 @@ gbrain stats
 **If zero or very low:** the local embedding model may be missing or misconfigured. Check:
 
 ```bash
-echo ${GBRAIN_EMBEDDING_MODEL:-$HOME/.gbrain/models/bge-m3-f16.gguf}
+gbrain models status
 ```
 
-If the file is missing, place `bge-m3-f16.gguf` there or set
-`GBRAIN_EMBEDDING_MODEL` to the correct full path. Then:
+If the model is missing, install it with `gbrain models install --source <path-or-url>`
+or set `GBRAIN_EMBEDDING_MODEL` to the correct full path. Then:
 
 ```bash
 gbrain embed --stale

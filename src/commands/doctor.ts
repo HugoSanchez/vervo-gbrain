@@ -9,6 +9,7 @@ import { compareVersions } from './migrations/index.ts';
 import { createProgress, startHeartbeat, type ProgressReporter } from '../core/progress.ts';
 import { getCliOptions, cliOptsToProgressOptions } from '../core/cli-options.ts';
 import type { DbUrlSource } from '../core/config.ts';
+import { formatEmbeddingModelInstallHint, getEmbeddingModelStatus } from '../core/model-artifacts.ts';
 import { join } from 'path';
 import { existsSync, readFileSync, readdirSync } from 'fs';
 
@@ -17,6 +18,14 @@ export interface Check {
   status: 'ok' | 'warn' | 'fail';
   message: string;
   issues?: Array<{ type: string; skill: string; action: string; fix?: any }>;
+}
+
+function formatBytes(bytes: number | null): string {
+  if (bytes == null) return 'unknown';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 /**
@@ -55,6 +64,7 @@ export async function runDoctor(engine: BrainEngine | null, args: string[], dbSo
   // --progress-json flags. On a 52K-page brain the DB checks can take minutes,
   // and without a heartbeat agents can't tell doctor from a hang.
   const progress = createProgress(cliOptsToProgressOptions(getCliOptions()));
+  const embeddingModel = getEmbeddingModelStatus();
 
   // --- Filesystem checks (always run, no DB needed) ---
 
@@ -103,6 +113,24 @@ export async function runDoctor(engine: BrainEngine | null, args: string[], dbSo
     const skillsDir = join(repoRoot, 'skills');
     const conformanceResult = checkSkillConformance(skillsDir);
     checks.push(conformanceResult);
+  }
+
+  // 2b. Local embedding model availability. This is part of the default
+  // Vervo path now: query falls back to keyword-only without the model,
+  // and embed/import cannot generate local vectors. Surface it even in
+  // --fast filesystem-only mode so installers get a deterministic signal.
+  if (embeddingModel.installed) {
+    checks.push({
+      name: 'embedding_model',
+      status: 'ok',
+      message: `${formatBytes(embeddingModel.sizeBytes)} at ${embeddingModel.path}`,
+    });
+  } else {
+    checks.push({
+      name: 'embedding_model',
+      status: 'warn',
+      message: `Missing at ${embeddingModel.path}. ${formatEmbeddingModelInstallHint(embeddingModel)}`,
+    });
   }
 
   // 3. Half-migrated Minions detection (filesystem-only).
@@ -503,9 +531,15 @@ export async function runDoctor(engine: BrainEngine | null, args: string[], dbSo
     if (health.embed_coverage >= 0.9) {
       checks.push({ name: 'embeddings', status: 'ok', message: `${pct}% coverage, ${health.missing_embeddings} missing` });
     } else if (health.embed_coverage > 0) {
-      checks.push({ name: 'embeddings', status: 'warn', message: `${pct}% coverage, ${health.missing_embeddings} missing. Run: gbrain embed --stale` });
+      const nextStep = embeddingModel.installed
+        ? 'Run: gbrain embed --stale'
+        : `${formatEmbeddingModelInstallHint(embeddingModel)} Then run: gbrain embed --stale`;
+      checks.push({ name: 'embeddings', status: 'warn', message: `${pct}% coverage, ${health.missing_embeddings} missing. ${nextStep}` });
     } else {
-      checks.push({ name: 'embeddings', status: 'warn', message: 'No embeddings yet. Run: gbrain embed --stale' });
+      const nextStep = embeddingModel.installed
+        ? 'Run: gbrain embed --stale'
+        : `${formatEmbeddingModelInstallHint(embeddingModel)} Then run: gbrain embed --stale`;
+      checks.push({ name: 'embeddings', status: 'warn', message: `No embeddings yet. ${nextStep}` });
     }
   } catch {
     checks.push({ name: 'embeddings', status: 'warn', message: 'Could not check embedding health' });

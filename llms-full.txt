@@ -1021,17 +1021,30 @@ restart the shell or add the PATH export to the shell profile.
 > aborts with `Aborted()` when it opens PGLite. Use the `git clone + bun link` path
 > above. Tracking issue: [#218](https://github.com/garrytan/gbrain/issues/218).
 
-## Step 2: API Keys
+## Step 2: Local Model + Optional API Keys
 
-Ask the user for these:
+Core startup does not require any provider API key.
+
+For hybrid/vector retrieval, install the local embedding model:
 
 ```bash
-export OPENAI_API_KEY=sk-...          # required for vector search
-export ANTHROPIC_API_KEY=sk-ant-...   # optional, improves search quality
+# Preferred: let gbrain provision the artifact.
+gbrain models install --source <path-or-url>
+
+# Or point gbrain at a custom location you already manage:
+export GBRAIN_EMBEDDING_MODEL=/full/path/to/bge-m3-f16.gguf
 ```
 
-Save to shell profile or `.env`. Without OpenAI, keyword search still works.
-Without Anthropic, search works but skips query expansion.
+Optional provider keys can be added later for optional features only:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # optional: subagent/minion agent runtime
+export GROQ_API_KEY=gsk_...           # optional: transcription
+export OPENAI_API_KEY=sk-...          # optional: transcription fallback / provider-specific extras
+```
+
+Without the local embedding model, keyword search still works and `query`
+falls back to keyword-only retrieval.
 
 ## Step 3: Create the Brain
 
@@ -1321,6 +1334,12 @@ gbrain init                     # local brain, ready in 2 seconds
 gbrain import ~/notes/          # index your markdown
 gbrain query "what themes show up across my notes?"
 ```
+
+Core local setup does not require provider API keys. For hybrid/vector search,
+install the local `bge-m3-f16.gguf` model with
+`gbrain models install --source <path-or-url>` or point
+`GBRAIN_EMBEDDING_MODEL` at a custom path. Until then, `gbrain query` falls
+back to keyword-only retrieval.
 
 **Do NOT use `bun install -g github:garrytan/gbrain`.** Bun blocks the top-level
 postinstall hook on global installs, so schema migrations never run and the CLI
@@ -1781,8 +1800,8 @@ Question
   │
   ├─ SEARCH PIPELINE (every query)
   │    ├─ Intent classifier (entity / temporal / event / general — auto-routes)
-  │    ├─ Multi-query expansion (Haiku rephrases the question 3 ways)
-  │    ├─ Vector search (HNSW cosine over OpenAI embeddings)
+  │    ├─ Optional host-managed expansion (Vervo/Hermes may rephrase upstream)
+  │    ├─ Vector search (HNSW cosine over local bge-m3 embeddings)
   │    ├─ Keyword search (Postgres tsvector + websearch_to_tsquery)
   │    ├─ Source-aware ranking (curated dirs outrank chat/daily swamp at SQL layer)
   │    ├─ Hard-exclude (test/ archive/ attachments/ .raw/ filtered before retrieval)
@@ -2158,7 +2177,7 @@ RRF fusion, multi-query expansion, and 4-layer dedup are engine-agnostic. They o
 **PGLite-specific details:**
 - Uses `pglite-schema.ts` for DDL (pgvector extension, pg_trgm, triggers, indexes)
 - Parameterized queries throughout (shared utilities in `src/core/utils.ts`)
-- `hybridSearch` keyword-only fallback when `OPENAI_API_KEY` is not set
+- `hybridSearch` keyword-only fallback when the local embedding model is not available
 - Data stored at `~/.gbrain/brain.db` (configurable)
 - pgvector HNSW index for cosine similarity vector search (same as Postgres)
 - tsvector + ts_rank for full-text search (same as Postgres)
@@ -4367,8 +4386,8 @@ gbrain stats
 gbrain embed --stale
 ```
 
-If `OPENAI_API_KEY` is not set, embeddings can't be generated. Keyword search
-still works without embeddings, but hybrid/semantic search won't.
+If the local embedding model is not installed, embeddings can't be generated.
+Keyword search still works without embeddings, but hybrid/semantic search won't.
 
 ### 4c. End-to-End Test
 
@@ -4412,13 +4431,14 @@ gbrain stats
 
 **Expected:** Embedded chunk count matches (or is close to) total chunk count.
 
-**If zero or very low:** `OPENAI_API_KEY` may be missing or invalid. Check:
+**If zero or very low:** the local embedding model may be missing or misconfigured. Check:
 
 ```bash
-echo $OPENAI_API_KEY | head -c 10
+gbrain models status
 ```
 
-If blank, set the key. Then:
+If the model is missing, install it with `gbrain models install --source <path-or-url>`
+or set `GBRAIN_EMBEDDING_MODEL` to the correct full path. Then:
 
 ```bash
 gbrain embed --stale

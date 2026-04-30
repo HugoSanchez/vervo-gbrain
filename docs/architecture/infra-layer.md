@@ -68,7 +68,7 @@ TOP N RESULTS (default 20)
 | `src/core/chunkers/llm.ts` | Claude Haiku guided chunking |
 | `src/core/search/hybrid.ts` | RRF merge of vector + keyword |
 | `src/core/search/dedup.ts` | 4-layer result deduplication |
-| `src/core/search/expansion.ts` | Legacy optional query expansion helper (Anthropic-backed, not on the default query path in `vervo-gbrain`) |
+| `src/core/search/expansion.ts` | Internal legacy query expansion helper for eval/tests only; Vervo/Hermes own expansion upstream |
 | `src/core/storage.ts` | Pluggable storage (S3, Supabase, local) |
 | `src/core/operations.ts` | Contract-first operation definitions (31 ops) |
 | `src/schema.sql` | Full DDL (10 tables, RLS, tsvector, HNSW) |

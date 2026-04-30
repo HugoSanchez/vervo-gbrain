@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { parseExpectedColumns, simplifyColumnDef } from '../src/core/schema-verify.ts';
+import { EMBEDDING_DIMENSIONS } from '../src/core/embedding.ts';
 
 describe('parseExpectedColumns', () => {
   it('extracts columns from all major tables', () => {
@@ -92,8 +93,9 @@ describe('simplifyColumnDef', () => {
   });
 
   it('handles vector type', () => {
-    const result = simplifyColumnDef("vector(1536)");
-    expect(result).toBe("vector(1536)");
+    const vectorType = `vector(${EMBEDDING_DIMENSIONS})`;
+    const result = simplifyColumnDef(vectorType);
+    expect(result).toBe(vectorType);
   });
 
   it('handles TSVECTOR type', () => {

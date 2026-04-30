@@ -16,9 +16,11 @@ import { execSync } from 'child_process';
 import { tmpdir } from 'os';
 import { hasDatabase, setupDB, teardownDB, getEngine, getConn } from './helpers.ts';
 
+const MOCK_EMBEDDING_DIMENSIONS = 1024;
+
 // Mock embedBatch so embed phase doesn't call OpenAI.
 mock.module('../../src/core/embedding.ts', () => ({
-  embedBatch: async (texts: string[]) => texts.map(() => new Float32Array(1536)),
+  embedBatch: async (texts: string[]) => texts.map(() => new Float32Array(MOCK_EMBEDDING_DIMENSIONS)),
 }));
 
 const { runDream } = await import('../../src/commands/dream.ts');

@@ -71,6 +71,12 @@ interface SkillpackReport {
   } | { error: string };
 }
 
+const NON_ACTIONABLE_WARNING_CHECKS = new Set([
+  // Missing local models should surface in `doctor`, but a fresh install
+  // should still count as healthy until the user opts into embeddings.
+  'embedding_model',
+]);
+
 function runDoctor(): SkillpackReport['doctor'] {
   const { cmd, prefix } = gbrainSpawn();
   try {
@@ -153,6 +159,7 @@ function buildReport(): SkillpackReport {
       } else if (check.status === 'warn') {
         // Warnings don't fail the report but surface as informational
         // actions the agent can decide about.
+        if (NON_ACTIONABLE_WARNING_CHECKS.has(check.name)) continue;
         const runMatch = check.message.match(/Run:\s*(.+)$/);
         if (runMatch && !actions.includes(runMatch[1].trim())) actions.push(runMatch[1].trim());
       }

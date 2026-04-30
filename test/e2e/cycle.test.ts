@@ -18,12 +18,14 @@ import { execSync } from 'child_process';
 import { tmpdir } from 'os';
 import { hasDatabase, setupDB, teardownDB, getEngine, getConn } from './helpers.ts';
 
+const MOCK_EMBEDDING_DIMENSIONS = 1024;
+
 // Mock embedBatch BEFORE importing runCycle so no real OpenAI calls happen
 // even when the full cycle's embed phase runs.
 mock.module('../../src/core/embedding.ts', () => ({
   embedBatch: async (texts: string[]) => {
     // Deterministic fake vector for each chunk.
-    return texts.map(() => new Float32Array(1536));
+    return texts.map(() => new Float32Array(MOCK_EMBEDDING_DIMENSIONS));
   },
 }));
 

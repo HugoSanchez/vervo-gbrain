@@ -9,10 +9,11 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { PGLiteEngine } from '../../src/core/pglite-engine.ts';
 import type { ChunkInput } from '../../src/core/types.ts';
+import { EMBEDDING_DIMENSIONS } from '../../src/core/embedding.ts';
 
 let engine: PGLiteEngine;
 
-function basisEmbedding(idx: number, dim = 1536): Float32Array {
+function basisEmbedding(idx: number, dim = EMBEDDING_DIMENSIONS): Float32Array {
   const emb = new Float32Array(dim);
   emb[idx % dim] = 1.0;
   return emb;

@@ -18,28 +18,20 @@ import { EMBEDDING_COST_PER_1K_TOKENS, estimateEmbeddingCostUsd } from '../src/c
 import { estimateTokens } from '../src/core/chunkers/code.ts';
 
 describe('Layer 8 D1 — embedding cost model', () => {
-  test('EMBEDDING_COST_PER_1K_TOKENS is text-embedding-3-large pricing', () => {
-    // Update this when OpenAI changes text-embedding-3-large pricing.
-    // As of 2026-04-24: $0.00013 / 1k tokens.
-    expect(EMBEDDING_COST_PER_1K_TOKENS).toBe(0.00013);
+  test('EMBEDDING_COST_PER_1K_TOKENS is zero for local embeddings', () => {
+    expect(EMBEDDING_COST_PER_1K_TOKENS).toBe(0);
   });
 
   test('estimateEmbeddingCostUsd scales linearly with tokens', () => {
     expect(estimateEmbeddingCostUsd(0)).toBe(0);
-    expect(estimateEmbeddingCostUsd(1000)).toBeCloseTo(0.00013, 5);
-    expect(estimateEmbeddingCostUsd(10_000)).toBeCloseTo(0.0013, 4);
-    expect(estimateEmbeddingCostUsd(1_000_000)).toBeCloseTo(0.13, 4);
+    expect(estimateEmbeddingCostUsd(1000)).toBe(0);
+    expect(estimateEmbeddingCostUsd(10_000)).toBe(0);
+    expect(estimateEmbeddingCostUsd(1_000_000)).toBe(0);
   });
 
-  test('5K-file TS repo sanity check: ~$5 at ~400k tokens', () => {
-    // A 5K-file TS repo at ~80 tokens/file averages ~400k tokens. Cost:
-    // 400_000 / 1000 * 0.00013 = $0.052 ≈ $0.05. Not $5. The CHANGELOG
-    // prose claim "~$5 one-time" was conservative for very-large repos
-    // (100k+ tokens/file megaliths). This test pins the formula, not
-    // the prose estimate.
+  test('large local reindex previews still report zero direct model spend', () => {
     const cost = estimateEmbeddingCostUsd(400_000);
-    expect(cost).toBeGreaterThan(0.04);
-    expect(cost).toBeLessThan(0.07);
+    expect(cost).toBe(0);
   });
 });
 

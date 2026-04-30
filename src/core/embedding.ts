@@ -5,18 +5,17 @@
  * Model is lazy-loaded on first call and unloaded after an idle timeout.
  */
 
-import { existsSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
+import {
+  EMBEDDING_MODEL_FILENAME,
+  getEmbeddingModelStatus,
+  resolveEmbeddingModelPath,
+} from './model-artifacts.ts';
 
 const MODEL = 'bge-m3';
 const DIMENSIONS = 1024;
 const MAX_CHARS = 8000;
 const BATCH_SIZE = 100;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
-
-const DEFAULT_MODEL_DIR = join(homedir(), '.gbrain', 'models');
-const MODEL_FILENAME = 'bge-m3-f16.gguf';
 
 let llama: any = null;
 let model: any = null;
@@ -26,10 +25,7 @@ let loading: Promise<void> | null = null;
 let modelPathOverride: string | null = null;
 
 function getModelPath(): string {
-  if (modelPathOverride) return modelPathOverride;
-  const envPath = process.env.GBRAIN_EMBEDDING_MODEL;
-  if (envPath) return envPath;
-  return join(DEFAULT_MODEL_DIR, MODEL_FILENAME);
+  return resolveEmbeddingModelPath(modelPathOverride);
 }
 
 function resetIdleTimer(): void {
@@ -51,18 +47,18 @@ async function ensureLoaded(): Promise<void> {
   }
 
   loading = (async () => {
-    const modelPath = getModelPath();
-    if (!existsSync(modelPath)) {
+    const status = getEmbeddingModelStatus(modelPathOverride);
+    if (!status.installed) {
       throw new Error(
-        `Embedding model not found at ${modelPath}. ` +
-        `Download ${MODEL_FILENAME} to ${DEFAULT_MODEL_DIR}/ ` +
-        `or set GBRAIN_EMBEDDING_MODEL to the full path.`,
+        `Embedding model not found at ${status.path}. ` +
+        `Run \`gbrain models install --source <path-or-url>\` ` +
+        `or set GBRAIN_EMBEDDING_MODEL to the full path of ${EMBEDDING_MODEL_FILENAME}.`,
       );
     }
 
     const { getLlama } = await import('node-llama-cpp');
     llama = await getLlama();
-    model = await llama.loadModel({ modelPath });
+    model = await llama.loadModel({ modelPath: status.path });
     context = await model.createEmbeddingContext();
     resetIdleTimer();
   })();
@@ -79,7 +75,7 @@ export function setModelPath(path: string | null): void {
 }
 
 export function isAvailable(): boolean {
-  return existsSync(getModelPath());
+  return getEmbeddingModelStatus(modelPathOverride).installed;
 }
 
 export function isLoaded(): boolean {

@@ -45,7 +45,8 @@ gbrain query "what themes show up across my notes?"
 ```
 
 Core local setup does not require provider API keys. For hybrid/vector search,
-install the local `bge-m3-f16.gguf` model at `~/.gbrain/models/` or point
+install the local `bge-m3-f16.gguf` model with
+`gbrain models install --source <path-or-url>` or point
 `GBRAIN_EMBEDDING_MODEL` at a custom path. Until then, `gbrain query` falls
 back to keyword-only retrieval.
 

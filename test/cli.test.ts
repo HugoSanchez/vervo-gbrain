@@ -19,6 +19,7 @@ describe('CLI structure', () => {
     expect(cliSource).toContain("'import'");
     expect(cliSource).toContain("'export'");
     expect(cliSource).toContain("'embed'");
+    expect(cliSource).toContain("'models'");
     expect(cliSource).toContain("'files'");
   });
 
@@ -118,6 +119,7 @@ describe('CLI dispatch integration', () => {
     const exitCode = await proc.exited;
     expect(stdout).toContain('USAGE');
     expect(stdout).toContain('gbrain <command>');
+    expect(stdout).toContain('models <status|path|install>');
     expect(exitCode).toBe(0);
   });
 

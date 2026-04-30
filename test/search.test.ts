@@ -6,6 +6,7 @@
 import { describe, test, expect } from 'bun:test';
 import { rrfFusion, cosineSimilarity, applyBacklinkBoost } from '../src/core/search/hybrid.ts';
 import type { SearchResult } from '../src/core/types.ts';
+import { EMBEDDING_DIMENSIONS } from '../src/core/embedding.ts';
 
 function makeResult(overrides: Partial<SearchResult> = {}): SearchResult {
   return {
@@ -136,7 +137,7 @@ describe('cosineSimilarity', () => {
   });
 
   test('works with high-dimensional vectors', () => {
-    const dim = 1536;
+    const dim = EMBEDDING_DIMENSIONS;
     const a = new Float32Array(dim).fill(1);
     const b = new Float32Array(dim).fill(1);
     expect(cosineSimilarity(a, b)).toBeCloseTo(1.0, 5);

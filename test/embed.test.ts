@@ -1,6 +1,8 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
 import type { BrainEngine } from '../src/core/engine.ts';
 
+const MOCK_EMBEDDING_DIMENSIONS = 1024;
+
 // Mock the embedding module BEFORE importing runEmbed, so runEmbed picks up
 // the mocked embedBatch. We track max concurrent invocations via a counter
 // that increments on entry and decrements when the mock resolves.
@@ -18,7 +20,7 @@ mock.module('../src/core/embedding.ts', () => ({
     // Simulate API latency so concurrent workers actually overlap.
     await new Promise(r => setTimeout(r, 30));
     activeEmbedCalls--;
-    return texts.map(() => new Float32Array(1536));
+    return texts.map(() => new Float32Array(MOCK_EMBEDDING_DIMENSIONS));
   },
 }));
 

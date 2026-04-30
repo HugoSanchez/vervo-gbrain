@@ -14,6 +14,7 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { PGLiteEngine } from '../src/core/pglite-engine.ts';
 import { runReindexCode } from '../src/commands/reindex-code.ts';
+import { EMBEDDING_MODEL } from '../src/core/embedding.ts';
 
 describe('Layer 13 E2 — runReindexCode', () => {
   let engine: PGLiteEngine;
@@ -77,7 +78,7 @@ describe('Layer 13 E2 — runReindexCode', () => {
     expect(result.reindexed).toBe(0);
     expect(result.totalTokens).toBeGreaterThan(0);
     expect(result.costUsd).toBeGreaterThanOrEqual(0);
-    expect(result.model).toBe('text-embedding-3-large');
+    expect(result.model).toBe(EMBEDDING_MODEL);
   });
 
   test('reindex walks every code page, failures counted per-slug', async () => {

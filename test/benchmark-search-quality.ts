@@ -15,6 +15,7 @@ import { dedupResults } from '../src/core/search/dedup.ts';
 import { precisionAtK, recallAtK, mrr, ndcgAtK } from '../src/core/search/eval.ts';
 import { autoDetectDetail } from '../src/core/search/intent.ts';
 import type { SearchResult, ChunkInput } from '../src/core/types.ts';
+import { EMBEDDING_DIMENSIONS } from '../src/core/embedding.ts';
 
 const RRF_K = 60;
 
@@ -22,7 +23,7 @@ const RRF_K = 60;
 
 // Create embeddings with shared dimensions to simulate semantic overlap.
 // Each "topic" gets a primary dimension. Related topics share secondary dimensions.
-function topicEmbedding(topics: Record<number, number>, dim = 1536): Float32Array {
+function topicEmbedding(topics: Record<number, number>, dim = EMBEDDING_DIMENSIONS): Float32Array {
   const emb = new Float32Array(dim);
   for (const [idx, weight] of Object.entries(topics)) {
     emb[Number(idx) % dim] = weight;
